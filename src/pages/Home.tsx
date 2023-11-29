@@ -1,26 +1,68 @@
+import React from 'react'
 import { NavigationProp, useNavigation } from '@react-navigation/native'
-import { Button, StyleSheet, Text, View } from 'react-native'
+import { Button, FlatList, StyleSheet, Text, View } from 'react-native'
+
+import { userService } from '../services/user.service'
+import { User } from '../model/user'
+import ListTile from '../components/ListTile'
 
 export default function Home() {
 
     const navigation = useNavigation<NavigationProp<any>>()
 
-    navigation.setOptions({
-        headerLeft: () => <Button title='Sair' onPress={logOff} />,
-        headerRight: () => <Button title='Add' onPress={goToUser} />
-    })
+    const [users, setUsers] = React.useState<User[]>([])
+    const [refreshing, setRefreshing] = React.useState(false)
+
+    React.useEffect(() => {
+        navigation.setOptions({
+            headerLeft: () => <Button title='Sair' onPress={logOff} />,
+            headerRight: () => <Button title='Add' onPress={goToCreateUser} />
+        })
+    
+        fetchUserList()
+    }, [])
+
+    function fetchUserList() {
+        setRefreshing(true)
+
+        userService.list().then(result => {
+                setRefreshing(false)
+                setUsers(result)
+            
+            }).catch(error => {
+                setRefreshing(false)
+                logOff()
+            })
+    }
 
     function logOff() {
         navigation.goBack()
     }
 
-    function goToUser() {
+    function goToCreateUser() {
         navigation.navigate('user')
+    }
+
+    function goToEditUser(user: User) {
+        navigation.navigate('user', { user })
+    }
+
+    if (users.length < 1) {
+        return (
+            <View style={styles.container}>
+                <Text>Nenhum usuários cadastrado</Text>
+            </View>
+        )
     }
 
     return (
         <View style={styles.container}>
-            <Text>Listagem de Usuários</Text>
+            <FlatList
+                data={users}
+                refreshing={refreshing}
+                onRefresh={fetchUserList}
+                renderItem={({ item }) => <ListTile user={item} onPress={goToEditUser} />}
+            />
         </View>
     )
 }
